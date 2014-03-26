@@ -820,6 +820,60 @@ tests.socket_nodelay = function () {
     c3.on("ready", ready_check);
 };
 
+tests.socket_keepalive = function () {
+    var name = "socket_keepalive", c1, c2, c3, ready_count = 0, quit_count = 0;
+
+    c1 = redis.createClient(null, null, {socket_keepalive: true});
+    c2 = redis.createClient(null, null, {socket_keepalive: false});
+    c3 = redis.createClient(null, null);
+
+    function quit_check() {
+        quit_count++;
+
+        if (quit_count === 3) {
+            next(name);
+        }
+    }
+
+    function run() {
+        assert.strictEqual(true, c1.options.socket_keepalive, name);
+        assert.strictEqual(false, c2.options.socket_keepalive, name);
+        assert.strictEqual(false, c3.options.socket_keepalive, name);
+       
+        // not really checking for keepalive, just that things are working 
+        // when keepalive is enabled.
+        c1.set(["set key 1", "set val"], require_string("OK", name));
+        c1.set(["set key 2", "set val"], require_string("OK", name));
+        c1.get(["set key 1"], require_string("set val", name));
+        c1.get(["set key 2"], require_string("set val", name));
+
+        c2.set(["set key 3", "set val"], require_string("OK", name));
+        c2.set(["set key 4", "set val"], require_string("OK", name));
+        c2.get(["set key 3"], require_string("set val", name));
+        c2.get(["set key 4"], require_string("set val", name));
+
+        c3.set(["set key 5", "set val"], require_string("OK", name));
+        c3.set(["set key 6", "set val"], require_string("OK", name));
+        c3.get(["set key 5"], require_string("set val", name));
+        c3.get(["set key 6"], require_string("set val", name));
+
+        c1.quit(quit_check);
+        c2.quit(quit_check);
+        c3.quit(quit_check);
+    }
+
+    function ready_check() {
+        ready_count++;
+        if (ready_count === 3) {
+            run();
+        }
+    }
+
+    c1.on("ready", ready_check);
+    c2.on("ready", ready_check);
+    c3.on("ready", ready_check);
+};
+
 tests.reconnect = function () {
     var name = "reconnect";
 
